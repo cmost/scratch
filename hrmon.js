@@ -8,7 +8,9 @@
             return;
         }
 
-        monitor(log, bt);
+        const button = document.createElement("button");
+        button.appendChild(document.createTextNode("monitor"));
+        button.addEventListener("click", () => monitor(log, bt));
     });
     
     async function monitor(log, bt) {
