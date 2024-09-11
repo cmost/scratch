@@ -11,8 +11,7 @@
         const button = document.createElement("button");
         button.appendChild(document.createTextNode("monitor"));
         button.addEventListener("click", () => monitor(log, bt));
-        document.body.insertBefore(log, button);
-
+        document.body.insertBefore(button, log);
     });
     
     async function monitor(log, bt) {
