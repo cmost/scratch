@@ -8,25 +8,43 @@
             return;
         }
 
-        try {
+        
         const button = document.createElement("button");
-        button.appendChild(document.createTextNode("monitor"));
-        button.addEventListener("click", function() { monitor(log, bt); });
+        button.appendChild(document.createTextNode("Pair"));
+        button.addEventListener("click", function() { pair(log, bt); });
         document.body.insertBefore(button, document.getElementById("log"));
-        } catch(e) {
-            log("wat" + e);
-        }
 
         log("Click to start");
     });
     
-    async function monitor(log, bt) {
+    async function handleBluetooth(log, bt) {
+        const button = document.createElement("button");
+        const logEl = document.getElementById("log");
+        let device = null;
+        let state = "Pair";
+
+        document.body.insertBefore(button, log);
+    
+        switch(state) {
+            case "Pair":
+                button.innerText = state;
+
+                device = await listen(button, "click" function () { return pair(log, bt); });
+                if (device) {
+                    state = "Connect";
+                }
+                break;
+            case "Connect":
+        }
+    }
+    async function pair(log, bt) {
         try {
             const device = await bt.requestDevice({
                 filters: [{ services: ["heart_rate"]}],
                 optionalServices: ["battery_service"],
             });
             log(`Found device ${device.name}\n`);
+            monitor(log, device);
         } catch(e) {
             log("Got an exception:" + e + "\n");
         }
