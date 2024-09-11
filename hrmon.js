@@ -1,9 +1,9 @@
 (function() {
-    window.addEventListener("DOMContentLoaded", ($ => {
+    window.addEventListener("DOMContentLoaded", () => {
         const log = logger();
 
-        log("initialized!")  
-    })
+        log("initialized!\b");
+    });
     
     function logger () {
         let el = document.getElementById ("log");
