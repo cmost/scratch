@@ -8,10 +8,14 @@
             return;
         }
 
+        try {
         const button = document.createElement("button");
         button.appendChild(document.createTextNode("monitor"));
         button.addEventListener("click", () => monitor(log, bt));
         document.body.insertBefore(button, log);
+        } catch(e) {
+            log("wat" + e);
+        }
 
         log("Click to start");
     });
