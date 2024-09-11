@@ -12,7 +12,7 @@
         const button = document.createElement("button");
         button.appendChild(document.createTextNode("monitor"));
         button.addEventListener("click", function() { monitor(log, bt); });
-        document.body.insertBefore(button, log);
+        document.body.insertBefore(button, document.getElementById("log"));
         } catch(e) {
             log("wat" + e);
         }
