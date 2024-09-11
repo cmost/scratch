@@ -35,6 +35,7 @@
         let el = document.getElementById ("log");
         if (!el) {
             el = document.createElement("pre");
+            el.id = "log";
             document.body.append(el);
         }
         return function (text) {
