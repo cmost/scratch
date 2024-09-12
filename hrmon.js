@@ -7,13 +7,60 @@
             return;
         }
 
-        const q = queue();
+        const btq = queue(), uxq = queue();
         const button = createButton(q, "Pair");
         
-        handleBluetooth(log);
+        bluetooth(btq, uxq);
+        uxq(uxq, btq)()
     });
+
+    async function ux(q, bt) {
+        const btn = button(q, "Initializing...");
+        btn.disabled = true;
+        document.body.appendChild(btn);
+        
+        const log = logger();
+
+        while(1) {
+            const item = q.pop();
+
+            switch(item) {
+                case "Init Failed":
+                    log(await q.pop());
+                    break;
+                case "Initialized":
+                    btn.innerText = "Pair";
+                    btn.disabled = false;
+                    break;
+                case "Pair":
+                    btn.innerText = "Pairing...";
+                    btn.disabled = true;
+                    bt.push(item);
+                    break;
+                case "Paired":
+                    btn.innerText = "Connect";
+                    btn.disabled = false;
+                    break;
+                case "Pairing Failed":
+                case "Connected":
+                case "Connect Failed":
+                case "Started":
+                case "Start Failed":
+                case "Stopped":
+                case "Stop Failed":
+                case "Heart Rate":
+            }
+        }
+    }
     
-    async function handleBluetooth(log) {
+    async function bluetooth(q, ux) {
+        if (!navigator.bluetooth) {
+            ux.push("Init Failed");
+            ux.push(new Error("Browser does not support Bluetooth."));
+            return;
+        }
+
+
         const q = queue ();
         const btn = button(q, "Pair");
 
@@ -21,6 +68,7 @@
 
         let device = null, rate = null;
 
+        ux.push("Initialized");
         while (1) {
             const item = await q.pop();
             switch(item) {
@@ -31,16 +79,48 @@
                             optionalServices: ["battery_service"],
                         }
                         device = await navigator.bluetooth.requestDevice(opts);
-                        btn.innerText = "Connect";
+                        const push = () => q.push("Disconnected");
+                        device.addEventListener("gattserverdisconnected", push);
+                        ux.push("Paired");
                     } catch(error) {
-                        log("Error pairing:" + e);
+                        ux.push("Pairing Failed");
+                        ux.push(e);
                     }
                     break;
-                case "Connect":
+                case "Disconnect":
+                    device.gatt.disconnect();
                     break;
-                case "Listen":
+                case "Disconnected":
+                    rate = null;
+                    ux.push("Disconnected");
+                    break;
+                case "Connect":
+                    try {
+                        const server = await device.gatt.connect();
+                        const service = await server.getPrimaryService("heart_rate");
+                        rate = getChatecteristic("heart_rate_measurement");
+                        const changed = () => q.push("Rate Changed");
+                        rate.addEventListener("characteristicvalurchanged", changed);
+                        ux.push("Connected");
+                    } catch(e) {
+                        ux.push("Connect Failed");
+                        ux.push(e);
+                    }
+                    break;
+                case "Start":
+                    try {
+                        await rate.startNotifications();
+                        ux.push("Started");
+                    } catch(e) {
+                        ux.push("Start Failed");
+                        ux.push(e);
+                    }
                     break;
                 case "Stop":
+                    break;
+                case "Rate Changed":
+                    ux.push("Heart Rate");
+                    ux.push(heartRate(rate.value));
                     break;
             }
         }
