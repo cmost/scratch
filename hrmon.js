@@ -8,19 +8,13 @@
             return;
         }
 
-        
-        const button = document.createElement("button");
-        button.appendChild(document.createTextNode("Pair"));
-        button.addEventListener("click", function() { pair(log, bt); });
-        document.body.insertBefore(button, document.getElementById("log"));
-
-        log("Click to start");
+        handleBluetooth(log, bt);
     });
     
     async function handleBluetooth(log, bt) {
         const button = document.createElement("button");
         const logEl = document.getElementById("log");
-        let device = null;
+        let device = null, rate = null;
         let state = "Pair";
 
         document.body.insertBefore(button, log);
@@ -29,13 +23,43 @@
             case "Pair":
                 button.innerText = state;
 
-                device = await listen(button, "click" function () { return pair(log, bt); });
+                device = await listen(button, "click", function () { return pair(log, bt); });
                 if (device) {
                     state = "Connect";
                 }
                 break;
             case "Connect":
+                button.innerText = state;
+
+                rate = await listen(button, "click", function() {
+                    return connect(log, device);
+                });
         }
+    }
+
+    async function connect(log, device) {
+        let server = null, service = null;
+        try {
+            server = await device.gatt. connect();
+        } catch(error) {
+            log("Error connectting: " + error);
+            return null;
+        }
+        
+        try {
+            service = await server.getPrimaryService ('heart_service');
+        } catch(error) {
+            log("Error getting heart rate service: " + error);
+            return null;
+        }
+
+        try {
+            return service.getChatecteristic('heart_rate');
+        } catch(error) {
+            log("Error getting HR characteristic: " + error);
+        }
+
+        return null;
     }
     async function pair(log, bt) {
         try {
@@ -44,10 +68,24 @@
                 optionalServices: ["battery_service"],
             });
             log(`Found device ${device.name}\n`);
-            monitor(log, device);
+            return device;
         } catch(e) {
             log("Got an exception:" + e + "\n");
         }
+        return null;
+    }
+
+    function listen(node, event, handler) {
+        const { promise, resolve, reject } = Promise.withResolvers();
+        async function callback(e) {
+            try {
+                resolve(await handler(e));
+            } catch(error) {
+                reject(error);
+            }
+        }
+        node.addEventListener(event, callback, {once: true});
+        return promise;
     }
     function logger () {
         let el = document.getElementById ("log");
