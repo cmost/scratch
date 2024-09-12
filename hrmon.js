@@ -1,23 +1,44 @@
 (function() {
     window.addEventListener("DOMContentLoaded", () => {
         const log = logger();
-        const bt =  navigator.bluetooth;
 
-        if (!bt) {
+        if (!navigator.bluetooth) {
             log("Browser does not support Bluetooth\n");
             return;
         }
 
-        handleBluetooth(log, bt);
+        const q = queue();
+        const button = createButton(q, "Pair");
+        
+        handleBluetooth(log);
     });
     
-    async function handleBluetooth(log, bt) {
-        const button = document.createElement("button");
-        const logEl = document.getElementById("log");
-        let device = null, rate = null;
-        let state = "Pair";
+    async function handleBluetooth(log) {
+        const q = queue ();
+        const btn = button(q, "Pair");
 
-        document.body.insertBefore(button, log);
+        document.body.insertBefore(btn, document.getElementById("log"));
+
+        let device = null, rate = null;
+
+        while (1) {
+            const item = await q.pop();
+            switch(item) {
+                case "Pair":
+                    try {
+                        device = await navigator.bluetooth.requestDevice(opts);
+                    } catch(error) {
+                        log("Error pairing:" + e);
+                    }
+                    break;
+                case "Connect":
+                    break;
+                case "Listen":
+                    break;
+                case "Stop":
+                    break;
+            }
+        }
     
         switch(state) {
             case "Pair":
@@ -86,6 +107,36 @@
         }
         node.addEventListener(event, callback, {once: true});
         return promise;
+    }
+
+    function button(q, text) {
+        const node = document.createElement("button");
+        node.innerText = text;
+        node.addEventListener("click", e => q.push(node.innerText));
+        return node;
+    }
+
+    function queue() {
+        let items = [];
+        let r = Promise.withResolvers();
+
+        return {push, pop};
+
+        function push (item) {
+            if (items.push(item) == 1) {
+                const {resolve} = r;
+                r = Promise.withResolvers();
+
+                resolve(null);
+            }
+        }
+
+        async function pop() {
+            if ( items.length == 0 ) {
+                await r.promise;
+            }
+            return items.shift();
+        }
     }
     function logger () {
         let el = document.getElementById ("log");
