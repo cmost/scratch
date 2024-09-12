@@ -1,70 +1,78 @@
 (function() {
     window.addEventListener("DOMContentLoaded", () => {
-        const log = logger();
-
-        if (!navigator.bluetooth) {
-            log("Browser does not support Bluetooth\n");
-            return;
-        }
-
         const btq = queue(), uxq = queue();
-        const button = createButton(q, "Pair");
         
         bluetooth(btq, uxq);
-        uxq(uxq, btq)()
+        uxq(uxq, btq);
     });
 
+    // handle UX rendering/event loop
     async function ux(q, bt) {
+        // create heart rare display and main button
+        const hr = document.createElement("div");
         const btn = button(q, "Initializing...");
-        btn.disabled = true;
+
+        document.body.appendChild(hr);
         document.body.appendChild(btn);
         
+        // create debug log
         const log = logger();
 
         while(1) {
+            btn.disabled = btn.innerText.includes("...");
             const item = q.pop();
 
             switch(item) {
-                case "Init Failed":
-                    log(await q.pop());
-                    break;
                 case "Initialized":
-                    btn.innerText = "Pair";
-                    btn.disabled = false;
+                    btn.innerText = "Pair";    
                     break;
                 case "Pair":
                     btn.innerText = "Pairing...";
-                    btn.disabled = true;
                     bt.push(item);
                     break;
                 case "Paired":
                     btn.innerText = "Connect";
-                    btn.disabled = false;
                     break;
-                case "Pairing Failed":
+                case "Connect":
+                    btn.innerText = "Connecting...";
+                    bt.push(item);
+                    break;
                 case "Connected":
-                case "Connect Failed":
+                    btn.innerText = "Start";
+                    break;
+                case "Start":
+                    btn.innerText = "Starting...";
+                    bt.push(item);
+                    break;
                 case "Started":
-                case "Start Failed":
+                    btn.innerText = "Stop";
+                    break;
+                case "Stop":
+                    btn.innerText = "Stopping...";
+                    bt.push(item);
+                    break;
                 case "Stopped":
-                case "Stop Failed":
+                    btn.innerText = "Start";
+                    break;
                 case "Heart Rate":
+                    hr.innerText = JSON.stringify(await q.pop());
+                    break;
+                default:
+                    // log all failures
+                    if (item.includes("Failed")) {
+                        log(await q.pop() + "\n");
+                    }
             }
         }
     }
     
+    // handle blue tooth data collection
     async function bluetooth(q, ux) {
         if (!navigator.bluetooth) {
             ux.push("Init Failed");
-            ux.push(new Error("Browser does not support Bluetooth."));
+            ux.push("Browser does not support Bluetooth.");
             return;
         }
-
-
-        const q = queue ();
-        const btn = button(q, "Pair");
-
-        document.body.insertBefore(btn, document.getElementById("log"));
 
         let device = null, rate = null;
 
@@ -117,81 +125,61 @@
                     }
                     break;
                 case "Stop":
+                    try {
+                        await rate.stopNotifications();
+                        ux.push("Stopped");
+                    } catch(e) {
+                        ux.push("Stop Failed");
+                        ux.push(e);
+                    }
                     break;
                 case "Rate Changed":
-                    ux.push("Heart Rate");
-                    ux.push(heartRate(rate.value));
+                    try {
+                        ux.push("Heart Rate");
+                        ux.push(parse(rate.value));
+                    } catch(e) {
+                        ux.push("Failed");
+                        ux.push(e);
+                    }
                     break;
             }
-        }
-    
-        switch(state) {
-            case "Pair":
-                button.innerText = state;
 
-                device = await listen(button, "click", function () { return pair(log, bt); });
-                if (device) {
-                    state = "Connect";
+            function parse(val) {
+                // See }https://bitbucket.org/bluetooth-SIG/public/src/main/gss/org.bluetooth.characteristic.heart_rate_measurement.yaml
+                // for the full format spec.
+                // Summary:
+                // uint8 Flags 
+                // uint8 BPM only if (Flags & 0x1 === 0x0)
+                // uint16 BPM only if (Flags & 0x1 === 0x1)
+                // uint16 EnergyExpended only if (Flags & 0x8 === 0x8)
+                // uint16[] RRs only if (Flags & 0x10 ===!0x10)
+                //          RRs are in oldest->newest order, unit = 1/1024 sec
+                // Flags bit1 = SensorContacted only if (Flags & 0x4 === 0x4)
+
+                const flags = val.getUint8();
+                let contact = null, rate = 0, offset = 1, energy = 0, rrs = [];
+                if (flags & 0x1 == 0x1) {
+                    rate = val.getUint16(1, true /* like endian */);
+                    offset += 2;
+                } else {
+                    rate = val.getUint8(1);
+                    offset ++;
                 }
-                break;
-            case "Connect":
-                button.innerText = state;
-
-                rate = await listen(button, "click", function() {
-                    return connect(log, device);
-                });
-        }
-    }
-
-    async function connect(log, device) {
-        let server = null, service = null;
-        try {
-            server = await device.gatt. connect();
-        } catch(error) {
-            log("Error connectting: " + error);
-            return null;
-        }
-        
-        try {
-            service = await server.getPrimaryService ('heart_service');
-        } catch(error) {
-            log("Error getting heart rate service: " + error);
-            return null;
-        }
-
-        try {
-            return service.getChatecteristic('heart_rate');
-        } catch(error) {
-            log("Error getting HR characteristic: " + error);
-        }
-
-        return null;
-    }
-    async function pair(log, bt) {
-        try {
-            const device = await bt.requestDevice({
-                filters: [{ services: ["heart_rate"]}],
-                optionalServices: ["battery_service"],
-            });
-            log(`Found device ${device.name}\n`);
-            return device;
-        } catch(e) {
-            log("Got an exception:" + e + "\n");
-        }
-        return null;
-    }
-
-    function listen(node, event, handler) {
-        const { promise, resolve, reject } = Promise.withResolvers();
-        async function callback(e) {
-            try {
-                resolve(await handler(e));
-            } catch(error) {
-                reject(error);
+                if (flags & 0x4 == 0x4 ) {
+                    contact = (flags & 0x2 == 0x2);
+                }
+                if (flags & 0x8 == 0x8) {
+                    energy = val.getUint16(offset, true /* little endian */);
+                    offset += 2;
+                }
+                if (flags & 0x10 == 0x10) {
+                    while( offset < val.byteLength) {
+                        rrs.push(val.getUint16(offset, true) * 1.0 / 1024);
+                        offset += 2;
+                    }
+                }
+                return {rate, energy, rrs, contact}
             }
-        }
-        node.addEventListener(event, callback, {once: true});
-        return promise;
     }
 
     function button(q, text) {
