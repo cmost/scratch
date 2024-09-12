@@ -26,7 +26,12 @@
             switch(item) {
                 case "Pair":
                     try {
+                        const opts = {
+                            filters: [{ services: ["heart_rate"] }],
+                            optionalServices: ["battery_service"],
+                        }
                         device = await navigator.bluetooth.requestDevice(opts);
+                        btn.innerText = "Connect";
                     } catch(error) {
                         log("Error pairing:" + e);
                     }
