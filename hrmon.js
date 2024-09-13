@@ -19,6 +19,7 @@
         // listen for button clicks.
         btn.addEventListener("click", () => q.push(btn.innerText));
         btn.innerText = "Initializing...";
+        pre.innerText = "log!";
 
         while(1) {
             //  disable button if an action is in progress.
@@ -188,6 +189,7 @@
         return {push, pop};
 
         function push (...item) {
+            alert(item);
             if (items.push(...item) == item.length && item.length > 0) {
                 const {resolve} = r;
                 r = Promise.withResolvers();
