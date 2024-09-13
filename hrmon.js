@@ -19,7 +19,6 @@
         // listen for button clicks.
         btn.addEventListener("click", () => q.push(btn.innerText));
         btn.innerText = "Initializing...";
-        pre.innerText = "log!";
 
         while(1) {
             //  disable button if an action is in progress.
@@ -94,7 +93,7 @@
                         const push = () => q.push("Disconnected");
                         device.addEventListener("gattserverdisconnected", push);
                         ux.push("Paired");
-                    } catch(error) {
+                    } catch(e) {
                         ux.push("Pairing Failed", e);
                     }
                     break;
@@ -189,7 +188,6 @@
         return {push, pop};
 
         function push (...item) {
-            alert(item);
             if (items.push(...item) == item.length && item.length > 0) {
                 const {resolve} = r;
                 r = Promise.withResolvers();
