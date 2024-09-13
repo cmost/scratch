@@ -66,6 +66,7 @@
                 default:
                     // log all failures.
                     if (item.includes("Failed")) {
+                        pre.prepend(createTextNode(item + "\n"));
                         pre.prepend(createTextNode((await q.pop()) + "\n"));
                     }
             }
