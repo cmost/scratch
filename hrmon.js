@@ -64,11 +64,9 @@
                     hr.innerText = JSON.stringify(await q.pop());
                     break;
                 default:
-                    pre.prepend(createTextNode(item + "\n"));
-
                     // log all failures.
                     if (item.includes("Failed")) {
-                        pre.prepend(createTextNode((await q.pop()) + "\n"));
+                        pre.prepend(document.createTextNode((await q.pop()) + "\n"));
                     }
             }
         }
