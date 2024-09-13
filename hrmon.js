@@ -3,51 +3,58 @@
         const btq = queue(), uxq = queue();
         
         bluetooth(btq, uxq);
-        uxq(uxq, btq);
+        ux(uxq, btq);
     });
 
-    // handle UX rendering/event loop
+    // handle UX rendering/event loop.
     async function ux(q, bt) {
-        // create heart rare display and main button
+        // create heart rate display, main button + logging area.
         const hr = document.createElement("div");
-        const btn = button(q, "Initializing...");
-
+        const btn = document.createElement("button");
+        const pre = document.createElement("pre");
         document.body.appendChild(hr);
         document.body.appendChild(btn);
+        document.body.appendChild(pre);
         
-        // create debug log
-        const log = logger();
+        // log just appends to the <pre> tag.
+        const log = text => pre.prepend(document.createTextNode(text + "\n"));
+
+        // listen for button clicks.
+        btn.addEventListener("click", () => q.push(btn.innerText));
+        btn.innerText = "Initializing...";
 
         while(1) {
+            //  disable button if an action is in progress.
             btn.disabled = btn.innerText.includes("...");
-            const item = q.pop();
 
+            // process next request - can be a click or BT state change.
+            const item = q.pop();
             switch(item) {
-                case "Initialized":
+                case "Initialized": // BT initialized.
                     btn.innerText = "Pair";    
                     break;
-                case "Pair":
+                case "Pair": // button clicked.
                     btn.innerText = "Pairing...";
                     bt.push(item);
                     break;
                 case "Paired":
                     btn.innerText = "Connect";
                     break;
-                case "Connect":
+                case "Connect": // button clicked.
                     btn.innerText = "Connecting...";
                     bt.push(item);
                     break;
                 case "Connected":
                     btn.innerText = "Start";
                     break;
-                case "Start":
+                case "Start": // button clicked.
                     btn.innerText = "Starting...";
                     bt.push(item);
                     break;
                 case "Started":
                     btn.innerText = "Stop";
                     break;
-                case "Stop":
+                case "Stop": // button clicked.
                     btn.innerText = "Stopping...";
                     bt.push(item);
                     break;
@@ -55,22 +62,22 @@
                     btn.innerText = "Start";
                     break;
                 case "Heart Rate":
+                    // just log measurement sample.
                     hr.innerText = JSON.stringify(await q.pop());
                     break;
                 default:
-                    // log all failures
+                    // log all failures.
                     if (item.includes("Failed")) {
-                        log(await q.pop() + "\n");
+                        pre.prepend(createTextNode((await q.pop()) + "\n"));
                     }
             }
         }
     }
     
-    // handle blue tooth data collection
+    // handle bluetooth data collection.
     async function bluetooth(q, ux) {
         if (!navigator.bluetooth) {
-            ux.push("Init Failed");
-            ux.push("Browser does not support Bluetooth.");
+            ux.push("Init Failed", "Browser does not support Bluetooth.");
             return;
         }
 
@@ -78,21 +85,18 @@
 
         ux.push("Initialized");
         while (1) {
-            const item = await q.pop();
-            switch(item) {
+            switch(await q.pop()) {
                 case "Pair":
                     try {
-                        const opts = {
+                        device = await navigator.bluetooth.requestDevice({
                             filters: [{ services: ["heart_rate"] }],
                             optionalServices: ["battery_service"],
-                        }
-                        device = await navigator.bluetooth.requestDevice(opts);
+                        });
                         const push = () => q.push("Disconnected");
                         device.addEventListener("gattserverdisconnected", push);
                         ux.push("Paired");
                     } catch(error) {
-                        ux.push("Pairing Failed");
-                        ux.push(e);
+                        ux.push("Pairing Failed", e);
                     }
                     break;
                 case "Disconnect":
@@ -106,13 +110,13 @@
                     try {
                         const server = await device.gatt.connect();
                         const service = await server.getPrimaryService("heart_rate");
-                        rate = getChatecteristic("heart_rate_measurement");
-                        const changed = () => q.push("Rate Changed");
-                        rate.addEventListener("characteristicvalurchanged", changed);
+                        rate = await getCharacteristic("heart_rate_measurement");
+
+                        const onchange = () => q.push("Rate Changed");
+                        rate.addEventListener("characteristicvaluechanged", onchange);
                         ux.push("Connected");
                     } catch(e) {
-                        ux.push("Connect Failed");
-                        ux.push(e);
+                        ux.push("Connect Failed", e);
                     }
                     break;
                 case "Start":
@@ -120,8 +124,7 @@
                         await rate.startNotifications();
                         ux.push("Started");
                     } catch(e) {
-                        ux.push("Start Failed");
-                        ux.push(e);
+                        ux.push("Start Failed", e);
                     }
                     break;
                 case "Stop":
@@ -129,22 +132,20 @@
                         await rate.stopNotifications();
                         ux.push("Stopped");
                     } catch(e) {
-                        ux.push("Stop Failed");
-                        ux.push(e);
+                        ux.push("Stop Failed", e);
                     }
                     break;
                 case "Rate Changed":
                     try {
-                        ux.push("Heart Rate");
-                        ux.push(parse(rate.value));
+                        ux.push("Heart Rate", parse(rate.value));
                     } catch(e) {
-                        ux.push("Failed");
-                        ux.push(e);
+                        ux.push("Failed", e);
                     }
                     break;
             }
+        }
 
-            function parse(val) {
+        function parse(val) {
                 // See }https://bitbucket.org/bluetooth-SIG/public/src/main/gss/org.bluetooth.characteristic.heart_rate_measurement.yaml
                 // for the full format spec.
                 // Summary:
@@ -179,14 +180,7 @@
                     }
                 }
                 return {rate, energy, rrs, contact}
-            }
-    }
-
-    function button(q, text) {
-        const node = document.createElement("button");
-        node.innerText = text;
-        node.addEventListener("click", e => q.push(node.innerText));
-        return node;
+        }
     }
 
     function queue() {
@@ -195,8 +189,8 @@
 
         return {push, pop};
 
-        function push (item) {
-            if (items.push(item) == 1) {
+        function push (...item) {
+            if (items.push(...item) == item.length && item.length > 0) {
                 const {resolve} = r;
                 r = Promise.withResolvers();
 
@@ -209,17 +203,6 @@
                 await r.promise;
             }
             return items.shift();
-        }
-    }
-    function logger () {
-        let el = document.getElementById ("log");
-        if (!el) {
-            el = document.createElement("pre");
-            el.id = "log";
-            document.body.append(el);
-        }
-        return function (text) {
-            el.appendChild(document.createTextNode(text));
         }
     }
 })();
