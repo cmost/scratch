@@ -16,9 +16,6 @@
         document.body.appendChild(btn);
         document.body.appendChild(pre);
         
-        // log just appends to the <pre> tag.
-        const log = text => pre.prepend(document.createTextNode(text + "\n"));
-
         // listen for button clicks.
         btn.addEventListener("click", () => q.push(btn.innerText));
         btn.innerText = "Initializing...";
@@ -66,6 +63,7 @@
                     hr.innerText = JSON.stringify(await q.pop());
                     break;
                 default:
+                    pre.prepend(createTextNode(item + "\n"));
                     // log all failures.
                     if (item.includes("Failed")) {
                         pre.prepend(createTextNode((await q.pop()) + "\n"));
