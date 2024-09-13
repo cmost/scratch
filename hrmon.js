@@ -15,7 +15,7 @@
         document.body.appendChild(hr);
         document.body.appendChild(btn);
         document.body.appendChild(pre);
-        
+
         // listen for button clicks.
         btn.addEventListener("click", () => q.push(btn.innerText));
         btn.innerText = "Initializing...";
@@ -25,7 +25,8 @@
             btn.disabled = btn.innerText.includes("...");
 
             // process next request - can be a click or BT state change.
-            const item = q.pop();
+            const item = await q.pop();
+            pre.innerText = item + "\n" + pre.innerText;
             switch(item) {
                 case "Initialized": // BT initialized.
                     btn.innerText = "Pair";    
@@ -63,7 +64,6 @@
                     hr.innerText = JSON.stringify(await q.pop());
                     break;
                 default:
-                    pre.prepend(createTextNode(item + "\n"));
                     // log all failures.
                     if (item.includes("Failed")) {
                         pre.prepend(createTextNode((await q.pop()) + "\n"));
