@@ -10,15 +10,19 @@
     async function ux(q, bt) {
         // create heart rate display, main button + logging area.
         const hr = document.createElement("div");
+        hr.style.fontSize = "40px";
+        const info = document.createElement("div");
         const btn = document.createElement("button");
         const pre = document.createElement("pre");
         document.body.appendChild(hr);
+        document.body.appendChild(info);
         document.body.appendChild(btn);
         document.body.appendChild(pre);
 
         // listen for button clicks.
         btn.addEventListener("click", () => q.push(btn.innerText));
         btn.innerText = "Initializing...";
+        btn.style.fontSize = "25px";
 
         while (1) {
             //  disable button if an action is in progress.
@@ -61,7 +65,9 @@
                     break;
                 case "Heart Rate":
                     // just log measurement sample.
-                    hr.innerText = JSON.stringify(await q.pop());
+                    const data = await q.pop();
+                    hr.innerText = data.rate + "";
+                    info.innerText = JSON.stringify(data);
                     break;
                 default:
                     // log all failures.
