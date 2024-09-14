@@ -26,7 +26,6 @@
 
             // process next request - can be a click or BT state change.
             const item = await q.pop();
-            pre.innerText = item + "\n" + pre.innerText;
             switch(item) {
                 case "Initialized": // BT initialized.
                     btn.innerText = "Pair";    
@@ -90,15 +89,12 @@
                             filters: [{ services: ["heart_rate"] }],
                             optionalServices: ["battery_service"],
                         });
-                        const push = () => q.push("Disconnected");
-                        device.addEventListener("gattserverdisconnected", push);
+                        const on = () => q.push("Disconnected");
+                        device.addEventListener("gattserverdisconnected", on);
                         ux.push("Paired");
                     } catch(e) {
                         ux.push("Pairing Failed", e);
                     }
-                    break;
-                case "Disconnect":
-                    device.gatt.disconnect();
                     break;
                 case "Disconnected":
                     rate = null;
@@ -108,7 +104,7 @@
                     try {
                         const server = await device.gatt.connect();
                         const service = await server.getPrimaryService("heart_rate");
-                        rate = await getCharacteristic("heart_rate_measurement");
+                        rate = await service.getCharacteristic("heart_rate_measurement");
 
                         const onchange = () => q.push("Rate Changed");
                         rate.addEventListener("characteristicvaluechanged", onchange);
