@@ -35,6 +35,7 @@
                     bt.push(item);
                     break;
                 case "Paired":
+                case "Disconnected":
                     btn.innerText = "Connect";
                     break;
                 case "Connect": // button clicked.
