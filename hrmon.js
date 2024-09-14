@@ -152,7 +152,7 @@
                 // Flags bit1 = SensorContacted only if (Flags & 0x4 === 0x4)
 
                 const flags = val.getUint8();
-                let contact = null, rate = 0, offset = 1, energy = 0, rrs = [];
+                let contact = null, rate = 0, offset = 1, energy = null, rrs = [];
                 if (flags & 0x1 == 0x1) {
                     rate = val.getUint16(1, true /* like endian */);
                     offset += 2;
@@ -173,7 +173,7 @@
                         offset += 2;
                     }
                 }
-                return {rate, energy, rrs, contact}
+                return {flags: flags.toString(16), rate, energy, rrs, contact, len: val.byteLength}
         }
     }
 
