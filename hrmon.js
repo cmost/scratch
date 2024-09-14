@@ -153,21 +153,21 @@
 
                 const flags = val.getUint8();
                 let contact = null, rate = 0, offset = 1, energy = null, rrs = [];
-                if (flags & 0x1 == 0x1) {
+                if ((flags & 0x1) == 0x1) {
                     rate = val.getUint16(1, true /* like endian */);
                     offset += 2;
                 } else {
                     rate = val.getUint8(1);
                     offset ++;
                 }
-                if (flags & 0x4 == 0x4 ) {
-                    contact = (flags & 0x2 == 0x2);
+                if ((flags & 0x4) == 0x4 ) {
+                    contact = (flags & 0x2) == 0x2;
                 }
-                if (flags & 0x8 == 0x8) {
+                if ((flags & 0x8) == 0x8) {
                     energy = val.getUint16(offset, true /* little endian */);
                     offset += 2;
                 }
-                if (flags & 0x10 == 0x10) {
+                if ((flags & 0x10) == 0x10) {
                     while( offset < val.byteLength) {
                         rrs.push(val.getUint16(offset, true) * 1.0 / 1024);
                         offset += 2;
